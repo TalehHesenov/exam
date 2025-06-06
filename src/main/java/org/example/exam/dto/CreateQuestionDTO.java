@@ -1,15 +1,14 @@
 package org.example.exam.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+
+import lombok.*;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class QuestionDto {
-    private Long id;
-    private String questionText;
+@AllArgsConstructor
+@Builder
+public class CreateQuestionDTO {
+    private String content;
     private String optionA;
     private String optionB;
     private String optionC;
@@ -17,3 +16,4 @@ public class QuestionDto {
     private String correctOption;
     private Long examId;
 }
+

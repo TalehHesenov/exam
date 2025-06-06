@@ -1,14 +1,14 @@
 package org.example.exam.security;
 
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -16,42 +16,47 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-@RequiredArgsConstructor
 public class JWTFilter extends OncePerRequestFilter {
 
-    private final JwtUtil jwtUtil;
-    private final UserDetailsService userDetailsService;
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String path = request.getRequestURI();
-
-        if (path.startsWith("/api/auth/register") || path.startsWith("/api/auth/login")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         final String authHeader = request.getHeader("Authorization");
-        String username = null;
-        String jwt = null;
 
+        String username = null;
+        String jwtToken = null;
+
+        // Authorization başlığı "Bearer token" şəklində gəlir
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwt = authHeader.substring(7);
-            username = jwtUtil.getUsernameFromToken(jwt);
+            jwtToken = authHeader.substring(7);
+            try {
+                username = jwtUtil.extractUsername(jwtToken);
+            } catch (Exception e) {
+                System.out.println("JWT token parsing error: " + e.getMessage());
+            }
         }
 
+        // Əgər istifadəçi login olubsa və SecurityContext-də yoxdursa token doğrula
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            var userDetails = userDetailsService.loadUserByUsername(username);
-            if (jwtUtil.validateJwtToken(jwt)) {
-                var authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
+
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            if (jwtUtil.validateToken(jwtToken, userDetails.getUsername())) {
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
                 );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
@@ -59,5 +64,4 @@ public class JWTFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-
 }

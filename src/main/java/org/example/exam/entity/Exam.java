@@ -1,41 +1,36 @@
 package org.example.exam.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
-import org.example.exam.enums.ExamLevel;
-import org.example.exam.enums.ExamType;
 
 import java.time.LocalDateTime;
-import java.util.List;
-
 
 @Entity
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "exams")
 public class Exam {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String title;
+    private String description;
 
-    @Enumerated(EnumType.STRING)
-    private ExamType examType;
+    private int durationMinutes;
 
-    @Enumerated(EnumType.STRING)
-    private ExamLevel examLevel;
+    private String level;
 
-    private int durationInMinutes;
+    private String category;
 
-    private LocalDateTime startTime;
+    private boolean isActive = true;
 
-    private LocalDateTime endTime;
+    private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Question> questions;
+    @PrePersist
+    public void prePersist() {
+        createdAt = LocalDateTime.now();
+    }
 }

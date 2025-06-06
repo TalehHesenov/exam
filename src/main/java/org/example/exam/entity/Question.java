@@ -3,29 +3,30 @@ package org.example.exam.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+
+
+import java.util.List;
+
 @Entity
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "questions")
 public class Question {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 1000)
     private String questionText;
 
-    private String optionA;
-    private String optionB;
-    private String optionC;
-    private String optionD;
+    @ElementCollection
+    private List<String> options;
 
-    private String correctOption;
+    private String correctAnswer;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "exam_id")
     private Exam exam;
 }
+

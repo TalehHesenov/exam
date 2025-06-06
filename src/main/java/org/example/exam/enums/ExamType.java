@@ -1,8 +1,11 @@
 package org.example.exam.enums;
 
+
 public enum ExamType {
     JAVA,
-    JAVASCRIPT,
+    JS,
     HTML,
     PYTHON
 }
+
+

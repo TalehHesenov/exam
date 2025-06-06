@@ -1,74 +1,55 @@
 package org.example.exam.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.exam.dto.LoginRequest;
-import org.example.exam.dto.RegisterRequest;
-import org.example.exam.entity.Role;
+import org.example.exam.dto.AuthResponseDTO;
+import org.example.exam.dto.LoginRequestDTO;
+import org.example.exam.dto.RegisterRequestDTO;
 import org.example.exam.entity.User;
-import org.example.exam.enums.RoleName;
-import org.example.exam.repository.RoleRepository;
+import org.example.exam.enums.Role;
 import org.example.exam.repository.UserRepository;
 import org.example.exam.security.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Scanner;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
 
-    public String register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already taken");
-        }
+    public void register(RegisterRequestDTO request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already taken");
+            throw new IllegalArgumentException("Bu email artıq istifadə olunur.");
         }
 
-        User user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .build();
-
-        Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
-                .orElseThrow(() -> new RuntimeException("ROLE_USER not found in DB"));
-
-        Set<Role> roles = new HashSet<>();
-        roles.add(userRole);
-        user.setRoles(roles);
+        User user = new User();
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(Role.USER);
+        user.setEnabled(true);
 
         userRepository.save(user);
-        return "User registered successfully";
+
     }
 
-    public String login(LoginRequest request) {
-        try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getUsername(),
-                            request.getPassword()
-                    )
-            );
 
-            return jwtUtil.generateToken(authentication);
+    public AuthResponseDTO login(LoginRequestDTO request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+        );
 
-        } catch (Exception e) {
-            throw new RuntimeException("Login failed: " + e.getMessage());
-        }
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("Email və ya şifrə yalnışdır."));
+
+        String token = jwtUtil.generateToken(user.getEmail());
+        return new AuthResponseDTO(token, user.getRole().name()); // Rolu da əlavə etdik
     }
-
 }
